@@ -17,6 +17,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
+const ALLOWED_ROLE_ID = '1368030640628301865';
 const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
 
 let ticketConfig = {};
@@ -74,6 +75,29 @@ client.on(Events.InteractionCreate, async interaction => {
   // ── 슬래시 커맨드 ──────────────────────────────────────
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
+      // 1) 인터랙션 페이로드 raw roles 확인 (캐시 무관)
+      const rawRoles = interaction.member._roles ?? [];
+      let hasRole = rawRoles.includes(ALLOWED_ROLE_ID);
+
+      // 2) raw에 없으면 guild.roles.fetch()로 캐시 강제 로딩 후 재확인
+      if (!hasRole) {
+        try {
+          await interaction.guild.roles.fetch();
+          hasRole = interaction.member.roles.cache.has(ALLOWED_ROLE_ID);
+        } catch (e) {
+          console.error('roles fetch error:', e);
+        }
+      }
+
+      console.log(`[권한체크] rawRoles=${JSON.stringify(rawRoles)} hasRole=${hasRole}`);
+
+      if (!hasRole) {
+        return interaction.reply({
+          content: '❌ 이 명령어는 지정된 역할만 사용할 수 있습니다.',
+          ephemeral: true,
+        });
+      }
+
       const title = interaction.options.getString('제목');
       const description = interaction.options.getString('설명');
       const adminRole = interaction.options.getRole('관리자역할');
