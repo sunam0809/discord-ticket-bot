@@ -75,25 +75,22 @@ client.on(Events.InteractionCreate, async interaction => {
   // ── 슬래시 커맨드 ──────────────────────────────────────
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
-      // 1) 인터랙션 페이로드 raw roles 확인 (캐시 무관)
-      const rawRoles = interaction.member._roles ?? [];
-      let hasRole = rawRoles.includes(ALLOWED_ROLE_ID);
-
-      // 2) raw에 없으면 guild.roles.fetch()로 캐시 강제 로딩 후 재확인
-      if (!hasRole) {
-        try {
-          await interaction.guild.roles.fetch();
-          hasRole = interaction.member.roles.cache.has(ALLOWED_ROLE_ID);
-        } catch (e) {
-          console.error('roles fetch error:', e);
-        }
+      // 멤버 직접 fetch 후 역할 확인 (봇이 관리자 권한 있으므로 동작)
+      let fetchedRoles = [];
+      try {
+        const fetchedMember = await interaction.guild.members.fetch(interaction.user.id);
+        fetchedRoles = [...fetchedMember.roles.cache.keys()];
+      } catch (e) {
+        console.error('member fetch error:', e);
       }
 
-      console.log(`[권한체크] rawRoles=${JSON.stringify(rawRoles)} hasRole=${hasRole}`);
+      const hasRole = fetchedRoles.includes(ALLOWED_ROLE_ID);
+      console.log(`[권한체크] userId=${interaction.user.id} fetchedRoles=${JSON.stringify(fetchedRoles)} hasRole=${hasRole}`);
 
       if (!hasRole) {
+        // 진단용: 실제 감지된 역할 ID 표시
         return interaction.reply({
-          content: '❌ 이 명령어는 지정된 역할만 사용할 수 있습니다.',
+          content: `❌ 권한 없음\n감지된 역할 IDs:\n\`\`\`\n${fetchedRoles.join('\n') || '없음'}\n\`\`\`\n필요한 역할 ID: \`${ALLOWED_ROLE_ID}\``,
           ephemeral: true,
         });
       }
