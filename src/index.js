@@ -32,6 +32,7 @@ function saveConfig() {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(ticketConfig, null, 2));
 }
 
+// /티켓봇생성 만 등록 — /티켓닫기 제거 (버튼으로만 닫음)
 const commands = [
   new SlashCommandBuilder()
     .setName('티켓봇생성')
@@ -45,9 +46,6 @@ const commands = [
     .addRoleOption(opt =>
       opt.setName('관리자역할').setDescription('티켓 문의를 보고 답할 수 있는 역할').setRequired(true)
     ),
-  new SlashCommandBuilder()
-    .setName('티켓닫기')
-    .setDescription('현재 티켓 채널을 닫습니다'),
 ].map(cmd => cmd.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -73,9 +71,9 @@ client.once(Events.ClientReady, async c => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+  // ── 슬래시 커맨드 ──────────────────────────────────────
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
-      // 권한 체크는 Discord가 setDefaultMemberPermissions(0)으로 직접 처리
       const title = interaction.options.getString('제목');
       const description = interaction.options.getString('설명');
       const adminRole = interaction.options.getRole('관리자역할');
@@ -101,24 +99,14 @@ client.on(Events.InteractionCreate, async interaction => {
 
       const row = new ActionRowBuilder().addComponents(button);
 
-      await interaction.reply({ content: '✅ 티켓 패널이 생성되었습니다!', ephemeral: true });
-      await interaction.channel.send({ embeds: [embed], components: [row] });
-    }
-
-    if (interaction.commandName === '티켓닫기') {
-      const channel = interaction.channel;
-      if (!channel.name.startsWith('티켓-')) {
-        return interaction.reply({
-          content: '❌ 이 채널은 티켓 채널이 아닙니다.',
-          ephemeral: true,
-        });
-      }
-      await interaction.reply({ content: '🔒 3초 후 티켓을 닫습니다...' });
-      setTimeout(() => channel.delete().catch(console.error), 3000);
+      // ephemeral 없이 채널에 직접 embed + 버튼으로 응답
+      await interaction.reply({ embeds: [embed], components: [row] });
     }
   }
 
+  // ── 버튼 ───────────────────────────────────────────────
   if (interaction.isButton()) {
+    // 티켓 생성 버튼
     if (interaction.customId === 'create_ticket') {
       const config = ticketConfig[interaction.guildId];
       if (!config) {
@@ -212,9 +200,10 @@ client.on(Events.InteractionCreate, async interaction => {
       }
     }
 
+    // 티켓 닫기 버튼
     if (interaction.customId === 'close_ticket') {
       const channel = interaction.channel;
-      await interaction.reply({ content: '🔒 3초 후 티켓을 닫습니다...' });
+      await interaction.reply({ content: '🔒 3초 후 티켓이 닫힙니다...' });
       setTimeout(() => channel.delete().catch(console.error), 3000);
     }
   }
