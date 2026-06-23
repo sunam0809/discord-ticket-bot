@@ -76,24 +76,18 @@ client.once(Events.ClientReady, async c => {
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
-      // 1) interaction payload 의 raw roles 배열 먼저 확인 (가장 신뢰도 높음)
-      const rawRoles = interaction.member?.roles;
-      let hasRole = Array.isArray(rawRoles)
-        ? rawRoles.includes(ALLOWED_ROLE_ID)
-        : rawRoles?.cache?.has(ALLOWED_ROLE_ID) ?? false;
-
-      // 2) 위에서 false 면 REST 로 멤버 직접 조회
-      if (!hasRole) {
-        try {
-          const freshMember = await interaction.guild.members.fetch(interaction.user.id);
-          hasRole = freshMember.roles.cache.has(ALLOWED_ROLE_ID);
-        } catch (e) {
-          console.error('member fetch error:', e);
-          hasRole = false;
-        }
+      // Discord REST API 로 멤버 roles 배열을 직접 조회 (캐시 의존 없음, 가장 확실)
+      let hasRole = false;
+      try {
+        const memberData = await rest.get(
+          Routes.guildMember(interaction.guildId, interaction.user.id)
+        );
+        hasRole = Array.isArray(memberData.roles) && memberData.roles.includes(ALLOWED_ROLE_ID);
+        console.log(`[티켓봇생성] user=${interaction.user.id} roles=${JSON.stringify(memberData.roles)} hasRole=${hasRole}`);
+      } catch (e) {
+        console.error('[티켓봇생성] REST fetch error:', e);
+        hasRole = false;
       }
-
-      console.log(`[티켓봇생성] user=${interaction.user.id} hasRole=${hasRole} rawRoles=${JSON.stringify(rawRoles?.cache?.map(r=>r.id) ?? rawRoles)}`);
 
       if (!hasRole) {
         return interaction.reply({
