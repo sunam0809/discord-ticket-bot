@@ -76,8 +76,17 @@ client.once(Events.ClientReady, async c => {
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
-      const member = interaction.member;
-      if (!member.roles.cache.has(ALLOWED_ROLE_ID)) {
+      // roles.cache가 비어있을 수 있으므로 guild에서 직접 fetch
+      let hasRole = interaction.member.roles.cache.has(ALLOWED_ROLE_ID);
+      if (!hasRole) {
+        try {
+          const freshMember = await interaction.guild.members.fetch(interaction.user.id);
+          hasRole = freshMember.roles.cache.has(ALLOWED_ROLE_ID);
+        } catch {
+          hasRole = false;
+        }
+      }
+      if (!hasRole) {
         return interaction.reply({
           content: '❌ 이 명령어는 지정된 관리자 역할만 사용할 수 있습니다.',
           ephemeral: true,
