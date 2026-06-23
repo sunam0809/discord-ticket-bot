@@ -35,8 +35,7 @@ function saveConfig() {
 const commands = [
   new SlashCommandBuilder()
     .setName('티켓봇생성')
-    .setDescription('이 채널에 티켓 패널을 생성합니다 (관리자 전용)')
-    .setDefaultMemberPermissions(0) // Discord가 직접 권한 강제 — 서버 설정에서 역할 지정
+    .setDescription('이 채널에 티켓 패널을 생성합니다')
     .addStringOption(opt =>
       opt.setName('제목').setDescription('티켓 패널 제목').setRequired(true)
     )
