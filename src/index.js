@@ -17,7 +17,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
-const ALLOWED_ROLE_ID = '1368030640628301865';
+const ALLOWED_USER_ID = '1368030640628301865';
 const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
 
 let ticketConfig = {};
@@ -75,22 +75,9 @@ client.on(Events.InteractionCreate, async interaction => {
   // ── 슬래시 커맨드 ──────────────────────────────────────
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
-      // 멤버 직접 fetch 후 역할 확인 (봇이 관리자 권한 있으므로 동작)
-      let fetchedRoles = [];
-      try {
-        const fetchedMember = await interaction.guild.members.fetch(interaction.user.id);
-        fetchedRoles = [...fetchedMember.roles.cache.keys()];
-      } catch (e) {
-        console.error('member fetch error:', e);
-      }
-
-      const hasRole = fetchedRoles.includes(ALLOWED_ROLE_ID);
-      console.log(`[권한체크] userId=${interaction.user.id} fetchedRoles=${JSON.stringify(fetchedRoles)} hasRole=${hasRole}`);
-
-      if (!hasRole) {
-        // 진단용: 실제 감지된 역할 ID 표시
+      if (interaction.user.id !== ALLOWED_USER_ID) {
         return interaction.reply({
-          content: `❌ 권한 없음\n감지된 역할 IDs:\n\`\`\`\n${fetchedRoles.join('\n') || '없음'}\n\`\`\`\n필요한 역할 ID: \`${ALLOWED_ROLE_ID}\``,
+          content: '❌ 이 명령어를 사용할 권한이 없습니다.',
           ephemeral: true,
         });
       }
