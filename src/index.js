@@ -76,16 +76,25 @@ client.once(Events.ClientReady, async c => {
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
-      // roles.cache가 비어있을 수 있으므로 guild에서 직접 fetch
-      let hasRole = interaction.member.roles.cache.has(ALLOWED_ROLE_ID);
+      // 1) interaction payload 의 raw roles 배열 먼저 확인 (가장 신뢰도 높음)
+      const rawRoles = interaction.member?.roles;
+      let hasRole = Array.isArray(rawRoles)
+        ? rawRoles.includes(ALLOWED_ROLE_ID)
+        : rawRoles?.cache?.has(ALLOWED_ROLE_ID) ?? false;
+
+      // 2) 위에서 false 면 REST 로 멤버 직접 조회
       if (!hasRole) {
         try {
           const freshMember = await interaction.guild.members.fetch(interaction.user.id);
           hasRole = freshMember.roles.cache.has(ALLOWED_ROLE_ID);
-        } catch {
+        } catch (e) {
+          console.error('member fetch error:', e);
           hasRole = false;
         }
       }
+
+      console.log(`[티켓봇생성] user=${interaction.user.id} hasRole=${hasRole} rawRoles=${JSON.stringify(rawRoles?.cache?.map(r=>r.id) ?? rawRoles)}`);
+
       if (!hasRole) {
         return interaction.reply({
           content: '❌ 이 명령어는 지정된 관리자 역할만 사용할 수 있습니다.',
