@@ -17,7 +17,6 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
-const ALLOWED_ROLE_ID = '1368030640628301865';
 const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
 
 let ticketConfig = {};
@@ -37,6 +36,7 @@ const commands = [
   new SlashCommandBuilder()
     .setName('티켓봇생성')
     .setDescription('이 채널에 티켓 패널을 생성합니다 (관리자 전용)')
+    .setDefaultMemberPermissions(0) // Discord가 직접 권한 강제 — 서버 설정에서 역할 지정
     .addStringOption(opt =>
       opt.setName('제목').setDescription('티켓 패널 제목').setRequired(true)
     )
@@ -76,26 +76,7 @@ client.once(Events.ClientReady, async c => {
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === '티켓봇생성') {
-      // Discord REST API 로 멤버 roles 배열을 직접 조회 (캐시 의존 없음, 가장 확실)
-      let hasRole = false;
-      try {
-        const memberData = await rest.get(
-          Routes.guildMember(interaction.guildId, interaction.user.id)
-        );
-        hasRole = Array.isArray(memberData.roles) && memberData.roles.includes(ALLOWED_ROLE_ID);
-        console.log(`[티켓봇생성] user=${interaction.user.id} roles=${JSON.stringify(memberData.roles)} hasRole=${hasRole}`);
-      } catch (e) {
-        console.error('[티켓봇생성] REST fetch error:', e);
-        hasRole = false;
-      }
-
-      if (!hasRole) {
-        return interaction.reply({
-          content: '❌ 이 명령어는 지정된 관리자 역할만 사용할 수 있습니다.',
-          ephemeral: true,
-        });
-      }
-
+      // 권한 체크는 Discord가 setDefaultMemberPermissions(0)으로 직접 처리
       const title = interaction.options.getString('제목');
       const description = interaction.options.getString('설명');
       const adminRole = interaction.options.getRole('관리자역할');
